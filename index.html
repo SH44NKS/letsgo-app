@@ -397,6 +397,36 @@ body::before {
 .meal-name { font-size: 14px; font-weight: 700; }
 .meal-desc { font-size: 12px; color: var(--grey); margin-top: 2px; }
 .meal-logged { font-family: var(--font-mono); font-size: 11px; color: var(--green); }
+.meal-builder {
+  display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:8px; margin:10px 0 12px;
+}
+.food-chip {
+  border:1px solid rgba(255,255,255,0.1);
+  background:var(--black2);
+  color:var(--white);
+  border-radius:10px;
+  padding:9px 10px;
+  text-align:left;
+  font-family:var(--font-body);
+  cursor:pointer;
+}
+.food-chip.selected {
+  border-color:var(--green);
+  background:rgba(0,255,136,0.1);
+}
+.food-chip strong { display:block; font-size:13px; }
+.food-chip span { color:var(--grey); font-family:var(--font-mono); font-size:10px; }
+.builder-summary {
+  border:1px solid rgba(0,255,136,0.22);
+  background:rgba(0,255,136,0.06);
+  border-radius:10px;
+  padding:10px 12px;
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--grey);
+  margin-bottom:12px;
+}
 .hint-box {
   background: rgba(255,215,0,0.08);
   border: 1px solid rgba(255,215,0,0.24);
@@ -869,41 +899,31 @@ body::before {
   <div class="section-label">REGISTRAR REFEIÇÃO</div>
   <div class="card">
     <div class="hint-box">
-      Sem balanca e sem saber macros? Escolha um prato parecido em "Estimativa rapida" e salve. Os numeros sao aproximados, bons para acompanhar direcao e consistencia.
-    </div>
-    <div class="input-group">
-      <label>Estimativa rapida</label>
-      <select id="meal-template" onchange="applyMealTemplate()">
-        <option value="">Vou escrever manualmente</option>
-        <option value="ovos_aveia">Cafe: ovos + aveia + banana</option>
-        <option value="frango_arroz">Almoco: frango + arroz + feijao</option>
-        <option value="carne_batata">Prato: carne + batata/arroz</option>
-        <option value="whey_banana">Pos-treino: whey + banana</option>
-        <option value="iogurte_fruta">Lanche: iogurte + fruta</option>
-        <option value="jantar_leve">Jantar leve: proteina + legumes</option>
-        <option value="livre_pequeno">Livre pequeno</option>
-        <option value="livre_grande">Livre grande</option>
-      </select>
+      Sem balanca e sem saber macros? Escolha a refeicao e toque nos alimentos que comeu. O app monta uma estimativa aproximada automaticamente.
     </div>
     <div class="input-row">
       <div class="input-group">
-        <label>Refeição</label>
-        <select id="meal-type">
-          <option>☀️ Café da Manhã</option>
-          <option>🍎 Lanche Manhã</option>
-          <option>🍽 Almoço</option>
-          <option>⚡ Pré-treino</option>
-          <option>💪 Pós-treino</option>
-          <option>🌙 Jantar</option>
-          <option>🌜 Ceia</option>
+        <label>Refeicao</label>
+        <select id="meal-type" onchange="selectedFoods=[]; renderMealBuilder()">
+          <option>Cafe da Manha</option>
+          <option>Lanche Manha</option>
+          <option>Almoco</option>
+          <option>Pre-treino</option>
+          <option>Pos-treino</option>
+          <option>Jantar</option>
+          <option>Ceia</option>
         </select>
       </div>
       <div class="input-group">
-        <label>Descrição</label>
-        <input type="text" id="meal-desc" placeholder="ex: Frango + arroz" />
+        <label>Descricao</label>
+        <input type="text" id="meal-desc" placeholder="ex: Cuscuz + ovo + banana" />
       </div>
     </div>
-    <div class="input-row">
+    <div id="meal-builder" class="meal-builder"></div>
+    <div id="meal-builder-summary" class="builder-summary">Selecione alimentos para montar sua refeicao.</div>
+    <div class="mini-actions" style="margin-bottom:12px;">
+      <button class="btn btn-outline btn-sm" onclick="clearMealBuilder()">LIMPAR ITENS</button>
+    </div>    <div class="input-row">
       <div class="input-group">
         <label>Prot (g)</label>
         <input type="number" id="m-prot" placeholder="0" inputmode="decimal" />
@@ -1048,8 +1068,15 @@ body::before {
   <div class="section-label">NOVA DIVIDA</div>
   <div class="card gold">
     <div class="input-group">
+      <label>Tipo</label>
+      <select id="debt-type">
+        <option value="debt">Divida parcelada</option>
+        <option value="fixed">Fixo mensal</option>
+      </select>
+    </div>
+    <div class="input-group">
       <label>Nome</label>
-      <input type="text" id="debt-name" placeholder="ex: cartao, curso, celular" />
+      <input type="text" id="debt-name" placeholder="ex: aluguel, internet, cartao, curso" />
     </div>
     <div class="input-row">
       <div class="input-group">
@@ -1082,6 +1109,9 @@ body::before {
       <div class="stat-val gold" id="debt-summary-total">R$0</div>
     </div>
   </div>
+
+  <div class="section-label">FIXOS MENSAIS</div>
+  <div class="card" id="fixed-list"></div>
 
   <div class="section-label">MINHAS DIVIDAS</div>
   <div class="card" id="debt-list"></div>
@@ -1326,7 +1356,7 @@ async function pullCloud(manual=false) {
     const json = await res.json();
     if (json.data?.payload) {
       importState(json.data.payload);
-      initHome(); loadDay(DB.get('active_day') ?? 0); loadCfg(); renderMeals(); renderTasks(); renderDebts();
+      initHome(); loadDay(DB.get('active_day') ?? 0); loadCfg(); renderMeals(); renderMealBuilder(); renderTasks(); renderDebts();
       setSyncStatus('sincronizado', 'on');
       if (manual) showToast('DADOS DA NUVEM CARREGADOS');
     } else {
@@ -1448,6 +1478,41 @@ const MEAL_TEMPLATES = {
   livre_pequeno: { desc: 'Refeicao livre pequena', prot: 20, carb: 45, fat: 18, kcal: 430 },
   livre_grande: { desc: 'Refeicao livre grande', prot: 35, carb: 95, fat: 35, kcal: 835 },
 };
+
+const FOOD_ITEMS = {
+  cuscuz: { name: 'Cuscuz', prot: 4, carb: 38, fat: 1, kcal: 180 },
+  pao: { name: 'Pao', prot: 5, carb: 28, fat: 2, kcal: 150 },
+  tapioca: { name: 'Tapioca', prot: 1, carb: 35, fat: 0, kcal: 140 },
+  aveia: { name: 'Aveia', prot: 5, carb: 27, fat: 3, kcal: 150 },
+  banana: { name: 'Banana', prot: 1, carb: 27, fat: 0, kcal: 105 },
+  fruta: { name: 'Fruta', prot: 1, carb: 20, fat: 0, kcal: 80 },
+  ovo: { name: 'Ovo', prot: 6, carb: 0, fat: 5, kcal: 70 },
+  queijo: { name: 'Queijo', prot: 7, carb: 1, fat: 8, kcal: 105 },
+  leite: { name: 'Leite', prot: 6, carb: 10, fat: 6, kcal: 120 },
+  iogurte: { name: 'Iogurte', prot: 12, carb: 12, fat: 3, kcal: 125 },
+  whey: { name: 'Whey', prot: 24, carb: 3, fat: 2, kcal: 125 },
+  arroz: { name: 'Arroz', prot: 4, carb: 45, fat: 1, kcal: 210 },
+  feijao: { name: 'Feijao', prot: 8, carb: 24, fat: 1, kcal: 140 },
+  macarrao: { name: 'Macarrao', prot: 7, carb: 42, fat: 1, kcal: 210 },
+  batata: { name: 'Batata', prot: 3, carb: 37, fat: 0, kcal: 160 },
+  frango: { name: 'Frango', prot: 32, carb: 0, fat: 4, kcal: 170 },
+  carne: { name: 'Carne', prot: 28, carb: 0, fat: 14, kcal: 250 },
+  peixe: { name: 'Peixe', prot: 28, carb: 0, fat: 6, kcal: 170 },
+  salada: { name: 'Salada', prot: 2, carb: 8, fat: 0, kcal: 45 },
+  azeite: { name: 'Azeite', prot: 0, carb: 0, fat: 10, kcal: 90 },
+  pasta_amendoim: { name: 'Pasta amendoim', prot: 4, carb: 4, fat: 8, kcal: 100 },
+};
+
+const MEAL_LIBRARY = {
+  cafe: ['cuscuz','pao','tapioca','aveia','banana','fruta','ovo','queijo','leite','pasta_amendoim'],
+  lanche: ['fruta','banana','iogurte','whey','pao','queijo','pasta_amendoim'],
+  almoco: ['arroz','feijao','macarrao','batata','frango','carne','peixe','ovo','salada','azeite'],
+  treino: ['banana','whey','pao','tapioca','arroz','batata','frango','iogurte'],
+  jantar: ['arroz','feijao','batata','frango','carne','peixe','ovo','salada','azeite'],
+  ceia: ['leite','iogurte','whey','fruta','pasta_amendoim','ovo'],
+};
+
+let selectedFoods = [];
 
 const EXERCISE_IMAGES = [
   [
@@ -2047,41 +2112,87 @@ function renderHomeTasks() {
 // ======================================================================
 //  DIETA
 // ======================================================================
-function applyMealTemplate() {
-  const key = document.getElementById('meal-template').value;
-  const t = MEAL_TEMPLATES[key];
-  if (!t) return;
-  document.getElementById('meal-desc').value = t.desc;
-  document.getElementById('m-prot').value = t.prot;
-  document.getElementById('m-carb').value = t.carb;
-  document.getElementById('m-fat').value = t.fat;
-  document.getElementById('m-kcal').value = t.kcal;
+function mealGroup() {
+  const type = (document.getElementById('meal-type')?.value || '').toLowerCase();
+  if (type.includes('cafe')) return 'cafe';
+  if (type.includes('lanche')) return 'lanche';
+  if (type.includes('almoco')) return 'almoco';
+  if (type.includes('treino')) return 'treino';
+  if (type.includes('jantar')) return 'jantar';
+  if (type.includes('ceia')) return 'ceia';
+  return 'almoco';
+}
+
+function mealTotals() {
+  return selectedFoods.reduce((tot, key) => {
+    const f = FOOD_ITEMS[key];
+    if (!f) return tot;
+    tot.prot += f.prot; tot.carb += f.carb; tot.fat += f.fat; tot.kcal += f.kcal;
+    return tot;
+  }, { prot:0, carb:0, fat:0, kcal:0 });
+}
+
+function updateMealBuilderSummary() {
+  const totals = mealTotals();
+  const names = selectedFoods.map(k => FOOD_ITEMS[k]?.name).filter(Boolean);
+  const desc = document.getElementById('meal-desc');
+  if (desc) desc.value = names.join(' + ');
+  document.getElementById('m-prot').value = totals.prot || '';
+  document.getElementById('m-carb').value = totals.carb || '';
+  document.getElementById('m-fat').value = totals.fat || '';
+  document.getElementById('m-kcal').value = totals.kcal || '';
+  const summary = document.getElementById('meal-builder-summary');
+  if (summary) summary.textContent = names.length
+    ? `${names.join(' + ')} | ${totals.prot}g P, ${totals.carb}g C, ${totals.fat}g G, ${totals.kcal} kcal`
+    : 'Selecione alimentos para montar sua refeicao.';
+}
+
+function toggleFood(key) {
+  selectedFoods = selectedFoods.includes(key) ? selectedFoods.filter(k => k !== key) : [...selectedFoods, key];
+  renderMealBuilder();
+}
+
+function clearMealBuilder() {
+  selectedFoods = [];
+  renderMealBuilder();
+}
+
+function renderMealBuilder() {
+  const cont = document.getElementById('meal-builder');
+  if (!cont) return;
+  const keys = MEAL_LIBRARY[mealGroup()] || MEAL_LIBRARY.almoco;
+  cont.innerHTML = keys.map(key => {
+    const f = FOOD_ITEMS[key];
+    const active = selectedFoods.includes(key);
+    return `<button class="food-chip ${active ? 'selected' : ''}" onclick="toggleFood('${key}')">
+      <strong>${f.name}</strong><span>${f.prot}P ${f.carb}C ${f.fat}G · ${f.kcal}kcal</span>
+    </button>`;
+  }).join('');
+  updateMealBuilderSummary();
 }
 
 function logMeal() {
   const mealType = document.getElementById('meal-type').value;
-  const tpl = MEAL_TEMPLATES[document.getElementById('meal-template').value] || null;
-  const desc = document.getElementById('meal-desc').value || tpl?.desc || '';
-  const prot = parseFloat(document.getElementById('m-prot').value)||tpl?.prot||0;
-  const carb = parseFloat(document.getElementById('m-carb').value)||tpl?.carb||0;
-  const fat = parseFloat(document.getElementById('m-fat').value)||tpl?.fat||0;
-  const kcal = parseFloat(document.getElementById('m-kcal').value)||tpl?.kcal||0;
+  const desc = document.getElementById('meal-desc').value || selectedFoods.map(k => FOOD_ITEMS[k]?.name).filter(Boolean).join(' + ');
+  const prot = parseFloat(document.getElementById('m-prot').value)||0;
+  const carb = parseFloat(document.getElementById('m-carb').value)||0;
+  const fat = parseFloat(document.getElementById('m-fat').value)||0;
+  const kcal = parseFloat(document.getElementById('m-kcal').value)||0;
 
-  if (!desc && !prot && !carb && !fat && !kcal) { alert('Preencha ao menos a descrição!'); return; }
+  if (!desc && !prot && !carb && !fat && !kcal) { alert('Preencha ao menos a descricao!'); return; }
 
   const meals = DB.get('meals') || {};
   if (!meals[today()]) meals[today()] = [];
   meals[today()].push({ type: mealType, desc, prot, carb, fat, kcal, time: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) });
   DB.set('meals', meals);
 
-  // Clear
-  ['meal-template','meal-desc','m-prot','m-carb','m-fat','m-kcal'].forEach(id => document.getElementById(id).value = '');
-
+  ['meal-desc','m-prot','m-carb','m-fat','m-kcal'].forEach(id => document.getElementById(id).value = '');
+  selectedFoods = [];
+  renderMealBuilder();
   renderMeals();
   renderGame();
-  showToast('REFEIÇÃO REGISTRADA! 🍗');
+  showToast('REFEICAO REGISTRADA!');
 }
-
 function renderMeals() {
   const meals = DB.get('meals') || {};
   const todayMeals = meals[today()] || [];
@@ -2235,14 +2346,16 @@ function money(v) {
 }
 
 function addDebt() {
+  const type = document.getElementById('debt-type').value;
   const name = document.getElementById('debt-name').value.trim();
   const installment = parseFloat(document.getElementById('debt-installment').value) || 0;
-  const totalInstallments = parseInt(document.getElementById('debt-total-installments').value) || 0;
+  const totalInstallments = type === 'fixed' ? 1 : (parseInt(document.getElementById('debt-total-installments').value) || 0);
   const paidInstallments = parseInt(document.getElementById('debt-paid-installments').value) || 0;
-  if (!name || !installment || !totalInstallments) { showToast('PREENCHA A DIVIDA'); return; }
+  if (!name || !installment || !totalInstallments) { showToast('PREENCHA O ITEM'); return; }
   const debts = DB.get('debts') || [];
   debts.push({
     id: Date.now(),
+    type,
     name,
     installment,
     totalInstallments,
@@ -2252,7 +2365,7 @@ function addDebt() {
   DB.set('debts', debts);
   ['debt-name','debt-installment','debt-total-installments','debt-paid-installments'].forEach(id => document.getElementById(id).value = '');
   renderDebts(); renderHomeDebts();
-  showToast('DIVIDA SALVA');
+  showToast(type === 'fixed' ? 'FIXO SALVO' : 'DIVIDA SALVA');
 }
 
 function payDebt(id) {
@@ -2273,28 +2386,41 @@ function removeDebt(id) {
 
 function debtTotals() {
   const debts = DB.get('debts') || [];
-  let remainingValue = 0, remainingInstallments = 0;
+  let remainingValue = 0, remainingInstallments = 0, fixedMonthly = 0;
   debts.forEach(d => {
+    if (d.type === 'fixed') {
+      fixedMonthly += Number(d.installment || 0);
+      return;
+    }
     const rest = Math.max(0, (d.totalInstallments || 0) - (d.paidInstallments || 0));
     remainingInstallments += rest;
     remainingValue += rest * (d.installment || 0);
   });
-  return { debts, remainingValue, remainingInstallments };
+  return { debts, remainingValue, remainingInstallments, fixedMonthly };
 }
 
 function renderDebts() {
-  const { debts, remainingValue, remainingInstallments } = debtTotals();
+  const { debts, remainingValue, remainingInstallments, fixedMonthly } = debtTotals();
   const totalEl = document.getElementById('debt-summary-total');
   const metaEl = document.getElementById('debt-summary-meta');
   if (totalEl) totalEl.textContent = money(remainingValue);
-  if (metaEl) metaEl.textContent = debts.length ? `${remainingInstallments} parcelas restantes no total` : 'Nenhuma divida cadastrada.';
+  if (metaEl) metaEl.textContent = debts.length ? `${remainingInstallments} parcelas restantes · fixos ${money(fixedMonthly)}/mes` : 'Nenhuma divida cadastrada.';
   const list = document.getElementById('debt-list');
+  const fixedList = document.getElementById('fixed-list');
+  const fixed = debts.filter(d => d.type === 'fixed');
+  const parcelDebts = debts.filter(d => d.type !== 'fixed');
+  if (fixedList) {
+    fixedList.innerHTML = fixed.length ? fixed.map(d => `<div class="debt-item">
+      <div class="debt-main"><div class="debt-title">${d.name}</div><div class="debt-meta">Fixo mensal · todo mes</div></div>
+      <div><div class="debt-pill">${money(d.installment)}</div><button class="btn btn-outline btn-sm" onclick="removeDebt(${d.id})">REMOVER</button></div>
+    </div>`).join('') : '<div class="empty-state"><span class="big">R$</span><p>Nenhum fixo mensal cadastrado</p></div>';
+  }
   if (!list) return;
-  if (!debts.length) {
+  if (!parcelDebts.length) {
     list.innerHTML = '<div class="empty-state"><span class="big">R$</span><p>Nenhuma divida cadastrada</p></div>';
     return;
   }
-  list.innerHTML = debts.map(d => {
+  list.innerHTML = parcelDebts.map(d => {
     const rest = Math.max(0, d.totalInstallments - d.paidInstallments);
     const left = rest * d.installment;
     return `<div class="debt-item">
@@ -2312,11 +2438,11 @@ function renderDebts() {
 }
 
 function renderHomeDebts() {
-  const { debts, remainingValue, remainingInstallments } = debtTotals();
+  const { debts, remainingValue, remainingInstallments, fixedMonthly } = debtTotals();
   const totalEl = document.getElementById('home-debt-total');
   const textEl = document.getElementById('home-debt-text');
   if (totalEl) totalEl.textContent = money(remainingValue);
-  if (textEl) textEl.textContent = debts.length ? `${remainingInstallments} parcelas faltando em ${debts.length} dividas.` : 'Nenhuma divida cadastrada.';
+  if (textEl) textEl.textContent = debts.length ? `${remainingInstallments} parcelas faltando · fixos ${money(fixedMonthly)}/mes.` : 'Nenhuma divida cadastrada.';
 }
 
 // ======================================================================
@@ -2386,6 +2512,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDay(DB.get('active_day') ?? 0);
   loadCfg();
   renderMeals();
+  renderMealBuilder();
   renderTasks();
   renderDebts();
   if (getSyncKey()) pullCloud(false);
