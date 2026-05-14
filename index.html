@@ -52,11 +52,14 @@ body::before {
   position: fixed; bottom: 0; left: 0; right: 0;
   background: rgba(10,10,15,0.95);
   border-top: 1px solid rgba(227,18,18,0.3);
-  display: flex; justify-content: space-around; align-items: center;
+  display: flex; justify-content: flex-start; align-items: center;
   padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
   z-index: 100;
   backdrop-filter: blur(12px);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+#nav::-webkit-scrollbar { display:none; }
 
 .nav-btn {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -64,6 +67,7 @@ body::before {
   font-family: var(--font-body); font-size: 10px; font-weight: 600;
   letter-spacing: 0.5px; cursor: pointer; padding: 4px 12px;
   transition: color 0.2s; text-transform: uppercase;
+  min-width: 72px;
 }
 .nav-btn svg { width:22px; height:22px; }
 .nav-btn.active { color: var(--red2); }
@@ -374,6 +378,16 @@ body::before {
 .meal-name { font-size: 14px; font-weight: 700; }
 .meal-desc { font-size: 12px; color: var(--grey); margin-top: 2px; }
 .meal-logged { font-family: var(--font-mono); font-size: 11px; color: var(--green); }
+.hint-box {
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(255,215,0,0.24);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--grey);
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
 
 .macro-ring {
   display: flex; justify-content: space-around;
@@ -392,6 +406,25 @@ body::before {
 .weight-date { font-family: var(--font-mono); font-size: 11px; color: var(--grey); }
 .weight-val { font-family: var(--font-display); font-size: 20px; color: var(--white); }
 .weight-delta { font-size: 12px; font-family: var(--font-mono); }
+
+.task-item, .debt-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.task-item:last-child, .debt-item:last-child { border-bottom:none; }
+.task-main, .debt-main { flex:1; min-width:0; }
+.task-title, .debt-title { font-weight:700; font-size:14px; }
+.task-meta, .debt-meta { font-family:var(--font-mono); color:var(--grey); font-size:11px; margin-top:2px; }
+.task-check {
+  width:30px; height:30px; border-radius:50%;
+  background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.35);
+  color:var(--green); font-weight:700; cursor:pointer; flex-shrink:0;
+}
+.debt-pill {
+  font-family:var(--font-display); color:var(--gold);
+  font-size:22px; line-height:1; text-align:right; min-width:76px;
+}
+.mini-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
 
 /* mini sparkline */
 .sparkline { width: 100%; height: 60px; margin-top: 8px; }
@@ -649,6 +682,32 @@ body::before {
     </div>
   </div>
 
+  <div class="section-label">TAREFAS</div>
+  <div class="card green">
+    <div class="flex-between">
+      <div>
+        <div class="card-title" style="color:var(--green);">MISSOES PENDENTES</div>
+        <div style="font-size:12px; color:var(--grey);">Ficam aqui ate voce marcar como feitas.</div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="border-color:var(--green); color:var(--green);" onclick="showPage('page-tarefas')">ABRIR</button>
+    </div>
+    <div id="home-task-list" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="section-label">DIVIDAS</div>
+  <div class="card gold">
+    <div class="flex-between">
+      <div>
+        <div class="card-title" style="color:var(--gold);">PARCELAS RESTANTES</div>
+        <div id="home-debt-text" style="font-size:12px; color:var(--grey);">Nenhuma divida cadastrada.</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="stat-val gold" id="home-debt-total" style="font-size:30px;">R$0</div>
+        <button class="btn btn-outline btn-sm" style="border-color:var(--gold); color:var(--gold); margin-top:6px;" onclick="showPage('page-dividas')">ABRIR</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Streak week -->
   <div class="section-label">SEMANA</div>
   <div style="padding: 0 16px;">
@@ -773,6 +832,23 @@ body::before {
   <!-- Log meal -->
   <div class="section-label">REGISTRAR REFEIÇÃO</div>
   <div class="card">
+    <div class="hint-box">
+      Sem balanca e sem saber macros? Escolha um prato parecido em "Estimativa rapida" e salve. Os numeros sao aproximados, bons para acompanhar direcao e consistencia.
+    </div>
+    <div class="input-group">
+      <label>Estimativa rapida</label>
+      <select id="meal-template" onchange="applyMealTemplate()">
+        <option value="">Vou escrever manualmente</option>
+        <option value="ovos_aveia">Cafe: ovos + aveia + banana</option>
+        <option value="frango_arroz">Almoco: frango + arroz + feijao</option>
+        <option value="carne_batata">Prato: carne + batata/arroz</option>
+        <option value="whey_banana">Pos-treino: whey + banana</option>
+        <option value="iogurte_fruta">Lanche: iogurte + fruta</option>
+        <option value="jantar_leve">Jantar leve: proteina + legumes</option>
+        <option value="livre_pequeno">Livre pequeno</option>
+        <option value="livre_grande">Livre grande</option>
+      </select>
+    </div>
     <div class="input-row">
       <div class="input-group">
         <label>Refeição</label>
@@ -880,6 +956,99 @@ body::before {
   <div class="section-label">HISTÓRICO DE TREINOS</div>
   <div id="treino-history-list"></div>
 
+  <div style="height:16px;"></div>
+</div>
+
+<!-- ============================================================ -->
+<!--  PAGE: TAREFAS                                               -->
+<!-- ============================================================ -->
+<div id="page-tarefas" class="page">
+  <div class="page-header">
+    <h1>✓ <span>TAREFAS</span></h1>
+    <p>Missoes da rotina que ficam visiveis ate concluir</p>
+  </div>
+
+  <div class="section-label">NOVA TAREFA</div>
+  <div class="card green">
+    <div class="input-group">
+      <label>Tarefa</label>
+      <input type="text" id="task-title" placeholder="ex: lavar roupa, estudar, levar documento" />
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Programar para</label>
+        <input type="date" id="task-date" />
+      </div>
+      <div class="input-group">
+        <label>Repetir</label>
+        <select id="task-repeat">
+          <option value="">Nao repetir</option>
+          <option value="daily">Todo dia</option>
+          <option value="weekly">Toda semana</option>
+          <option value="monthly">Todo mes</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-green" style="width:100%; justify-content:center;" onclick="addTask()">+ ADICIONAR MISSAO</button>
+  </div>
+
+  <div class="section-label">PENDENTES</div>
+  <div class="card" id="task-list"></div>
+
+  <div class="section-label">CONCLUIDAS RECENTES</div>
+  <div class="card" id="task-done-list"></div>
+  <div style="height:16px;"></div>
+</div>
+
+<!-- ============================================================ -->
+<!--  PAGE: DIVIDAS                                               -->
+<!-- ============================================================ -->
+<div id="page-dividas" class="page">
+  <div class="page-header">
+    <h1>R$ <span>DIVIDAS</span></h1>
+    <p>Controle simples de parcelas restantes e valor para guardar</p>
+  </div>
+
+  <div class="section-label">NOVA DIVIDA</div>
+  <div class="card gold">
+    <div class="input-group">
+      <label>Nome</label>
+      <input type="text" id="debt-name" placeholder="ex: cartao, curso, celular" />
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Valor da parcela</label>
+        <input type="number" id="debt-installment" placeholder="250" inputmode="decimal" step="0.01" />
+      </div>
+      <div class="input-group">
+        <label>Total de parcelas</label>
+        <input type="number" id="debt-total-installments" placeholder="12" inputmode="numeric" />
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Parcelas ja pagas</label>
+        <input type="number" id="debt-paid-installments" placeholder="0" inputmode="numeric" />
+      </div>
+      <div class="input-group" style="display:flex; align-items:flex-end;">
+        <button class="btn btn-outline btn-sm" style="border-color:var(--gold); color:var(--gold); width:100%; justify-content:center; height:42px;" onclick="addDebt()">SALVAR</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">RESUMO</div>
+  <div class="card">
+    <div class="flex-between">
+      <div>
+        <div class="card-title">TOTAL PARA QUITAR</div>
+        <div id="debt-summary-meta" style="font-size:12px; color:var(--grey);">Nenhuma divida cadastrada.</div>
+      </div>
+      <div class="stat-val gold" id="debt-summary-total">R$0</div>
+    </div>
+  </div>
+
+  <div class="section-label">MINHAS DIVIDAS</div>
+  <div class="card" id="debt-list"></div>
   <div style="height:16px;"></div>
 </div>
 
@@ -1014,6 +1183,14 @@ body::before {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     PROGRESSO
   </button>
+  <button class="nav-btn" onclick="showPage('page-tarefas', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    TAREFAS
+  </button>
+  <button class="nav-btn" onclick="showPage('page-dividas', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6"/></svg>
+    DIVIDAS
+  </button>
   <button class="nav-btn" onclick="showPage('page-config', this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 003.51 19.07M4.93 4.93A10 10 0 0020.49 19.07"/></svg>
     CONFIG
@@ -1102,7 +1279,7 @@ async function pullCloud(manual=false) {
     const json = await res.json();
     if (json.data?.payload) {
       importState(json.data.payload);
-      initHome(); loadDay(DB.get('active_day') ?? 0); loadCfg(); renderMeals();
+      initHome(); loadDay(DB.get('active_day') ?? 0); loadCfg(); renderMeals(); renderTasks(); renderDebts();
       setSyncStatus('sincronizado', 'on');
       if (manual) showToast('DADOS DA NUVEM CARREGADOS');
     } else {
@@ -1214,6 +1391,17 @@ const QUOTES = [
   'O HOMEM QUE VOCÊ QUER SER ESTÁ NA PRÓXIMA SÉRIE',
 ];
 
+const MEAL_TEMPLATES = {
+  ovos_aveia: { desc: 'Ovos + aveia + banana', prot: 28, carb: 55, fat: 18, kcal: 500 },
+  frango_arroz: { desc: 'Frango + arroz + feijao', prot: 45, carb: 75, fat: 12, kcal: 610 },
+  carne_batata: { desc: 'Carne + batata/arroz', prot: 38, carb: 65, fat: 18, kcal: 590 },
+  whey_banana: { desc: 'Whey + banana', prot: 25, carb: 30, fat: 2, kcal: 240 },
+  iogurte_fruta: { desc: 'Iogurte + fruta', prot: 18, carb: 35, fat: 6, kcal: 270 },
+  jantar_leve: { desc: 'Proteina + legumes', prot: 35, carb: 25, fat: 12, kcal: 360 },
+  livre_pequeno: { desc: 'Refeicao livre pequena', prot: 20, carb: 45, fat: 18, kcal: 430 },
+  livre_grande: { desc: 'Refeicao livre grande', prot: 35, carb: 95, fat: 35, kcal: 835 },
+};
+
 // ======================================================================
 //  NAVIGATION
 // ======================================================================
@@ -1223,10 +1411,12 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   else {
-    const idx = ['page-home','page-treino','page-dieta','page-progresso','page-config'].indexOf(id);
+    const idx = ['page-home','page-treino','page-dieta','page-progresso','page-tarefas','page-dividas','page-config'].indexOf(id);
     document.querySelectorAll('.nav-btn')[idx]?.classList.add('active');
   }
   if (id === 'page-progresso') renderProgress();
+  if (id === 'page-tarefas') renderTasks();
+  if (id === 'page-dividas') renderDebts();
 }
 
 function goToTreino() {
@@ -1274,10 +1464,12 @@ function calcXP() {
   const water = DB.get('water') || {};
   const sleep = DB.get('sleep') || {};
   const weights = DB.get('weights') || [];
+  const tasks = DB.get('tasks') || [];
   const mealCount = Object.values(meals).reduce((sum, day) => sum + (Array.isArray(day) ? day.length : 0), 0);
   const waterCount = Object.values(water).reduce((sum, cups) => sum + (Number(cups) || 0), 0);
   const sleepCount = Object.values(sleep).filter(v => Number(v) >= 6).length;
-  return logs.length * 25 + mealCount * 10 + waterCount * 5 + sleepCount * 15 + weights.length * 20;
+  const taskCount = tasks.filter(t => t.done).length;
+  return logs.length * 25 + mealCount * 10 + waterCount * 5 + sleepCount * 15 + weights.length * 20 + taskCount * 10;
 }
 
 function renderGame() {
@@ -1355,6 +1547,8 @@ function initHome() {
   const todaySleep = sleepData[today()] || 6;
   document.getElementById('sleep-slider').value = todaySleep;
   updateSleep(todaySleep);
+  renderHomeTasks();
+  renderHomeDebts();
 }
 
 function calcStreak() {
@@ -1636,15 +1830,109 @@ function saveTreino() {
 }
 
 // ======================================================================
+//  TAREFAS
+// ======================================================================
+function addDays(dateStr, days) {
+  const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function addTask() {
+  const title = document.getElementById('task-title').value.trim();
+  if (!title) { showToast('ESCREVA A TAREFA'); return; }
+  const tasks = DB.get('tasks') || [];
+  tasks.push({
+    id: Date.now(),
+    title,
+    due: document.getElementById('task-date').value || today(),
+    repeat: document.getElementById('task-repeat').value,
+    done: false,
+    createdAt: new Date().toISOString(),
+  });
+  DB.set('tasks', tasks);
+  document.getElementById('task-title').value = '';
+  document.getElementById('task-date').value = '';
+  document.getElementById('task-repeat').value = '';
+  renderTasks(); renderHomeTasks(); renderGame();
+  showToast('MISSAO ADICIONADA');
+}
+
+function completeTask(id) {
+  const tasks = DB.get('tasks') || [];
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  task.done = true;
+  task.doneAt = new Date().toISOString();
+  if (task.repeat) {
+    const step = task.repeat === 'daily' ? 1 : task.repeat === 'weekly' ? 7 : 30;
+    tasks.push({
+      id: Date.now() + step,
+      title: task.title,
+      due: addDays(task.due || today(), step),
+      repeat: task.repeat,
+      done: false,
+      createdAt: new Date().toISOString(),
+    });
+  }
+  DB.set('tasks', tasks);
+  renderTasks(); renderHomeTasks(); renderGame();
+  showToast('TAREFA FEITA!');
+}
+
+function renderTaskRows(items, emptyText, limit=null) {
+  const list = limit ? items.slice(0, limit) : items;
+  if (!list.length) return `<div class="empty-state"><span class="big">✓</span><p>${emptyText}</p></div>`;
+  return list.map(t => `
+    <div class="task-item">
+      ${!t.done ? `<button class="task-check" onclick="completeTask(${t.id})">✓</button>` : `<span class="badge badge-green">OK</span>`}
+      <div class="task-main">
+        <div class="task-title">${t.title}</div>
+        <div class="task-meta">${fmtLong(t.due || today())}${t.repeat ? ' · repete' : ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTasks() {
+  const tasks = DB.get('tasks') || [];
+  const pending = tasks.filter(t => !t.done).sort((a,b) => (a.due || '').localeCompare(b.due || ''));
+  const done = tasks.filter(t => t.done).sort((a,b) => (b.doneAt || '').localeCompare(a.doneAt || '')).slice(0, 8);
+  const list = document.getElementById('task-list');
+  const doneList = document.getElementById('task-done-list');
+  if (list) list.innerHTML = renderTaskRows(pending, 'Nenhuma tarefa pendente');
+  if (doneList) doneList.innerHTML = renderTaskRows(done, 'Nada concluido ainda');
+}
+
+function renderHomeTasks() {
+  const cont = document.getElementById('home-task-list');
+  if (!cont) return;
+  const tasks = (DB.get('tasks') || []).filter(t => !t.done).sort((a,b) => (a.due || '').localeCompare(b.due || ''));
+  cont.innerHTML = renderTaskRows(tasks, 'Nenhuma missao pendente', 4);
+}
+
+// ======================================================================
 //  DIETA
 // ======================================================================
+function applyMealTemplate() {
+  const key = document.getElementById('meal-template').value;
+  const t = MEAL_TEMPLATES[key];
+  if (!t) return;
+  document.getElementById('meal-desc').value = t.desc;
+  document.getElementById('m-prot').value = t.prot;
+  document.getElementById('m-carb').value = t.carb;
+  document.getElementById('m-fat').value = t.fat;
+  document.getElementById('m-kcal').value = t.kcal;
+}
+
 function logMeal() {
   const mealType = document.getElementById('meal-type').value;
-  const desc = document.getElementById('meal-desc').value || '';
-  const prot = parseFloat(document.getElementById('m-prot').value)||0;
-  const carb = parseFloat(document.getElementById('m-carb').value)||0;
-  const fat = parseFloat(document.getElementById('m-fat').value)||0;
-  const kcal = parseFloat(document.getElementById('m-kcal').value)||0;
+  const tpl = MEAL_TEMPLATES[document.getElementById('meal-template').value] || null;
+  const desc = document.getElementById('meal-desc').value || tpl?.desc || '';
+  const prot = parseFloat(document.getElementById('m-prot').value)||tpl?.prot||0;
+  const carb = parseFloat(document.getElementById('m-carb').value)||tpl?.carb||0;
+  const fat = parseFloat(document.getElementById('m-fat').value)||tpl?.fat||0;
+  const kcal = parseFloat(document.getElementById('m-kcal').value)||tpl?.kcal||0;
 
   if (!desc && !prot && !carb && !fat && !kcal) { alert('Preencha ao menos a descrição!'); return; }
 
@@ -1654,7 +1942,7 @@ function logMeal() {
   DB.set('meals', meals);
 
   // Clear
-  ['meal-desc','m-prot','m-carb','m-fat','m-kcal'].forEach(id => document.getElementById(id).value = '');
+  ['meal-template','meal-desc','m-prot','m-carb','m-fat','m-kcal'].forEach(id => document.getElementById(id).value = '');
 
   renderMeals();
   renderGame();
@@ -1807,6 +2095,98 @@ function renderProgress() {
 }
 
 // ======================================================================
+//  DIVIDAS
+// ======================================================================
+function money(v) {
+  return 'R$' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function addDebt() {
+  const name = document.getElementById('debt-name').value.trim();
+  const installment = parseFloat(document.getElementById('debt-installment').value) || 0;
+  const totalInstallments = parseInt(document.getElementById('debt-total-installments').value) || 0;
+  const paidInstallments = parseInt(document.getElementById('debt-paid-installments').value) || 0;
+  if (!name || !installment || !totalInstallments) { showToast('PREENCHA A DIVIDA'); return; }
+  const debts = DB.get('debts') || [];
+  debts.push({
+    id: Date.now(),
+    name,
+    installment,
+    totalInstallments,
+    paidInstallments: Math.min(paidInstallments, totalInstallments),
+    createdAt: new Date().toISOString(),
+  });
+  DB.set('debts', debts);
+  ['debt-name','debt-installment','debt-total-installments','debt-paid-installments'].forEach(id => document.getElementById(id).value = '');
+  renderDebts(); renderHomeDebts();
+  showToast('DIVIDA SALVA');
+}
+
+function payDebt(id) {
+  const debts = DB.get('debts') || [];
+  const d = debts.find(x => x.id === id);
+  if (!d) return;
+  d.paidInstallments = Math.min(d.totalInstallments, (d.paidInstallments || 0) + 1);
+  DB.set('debts', debts);
+  renderDebts(); renderHomeDebts();
+  showToast('PARCELA MARCADA');
+}
+
+function removeDebt(id) {
+  if (!confirm('Remover esta divida?')) return;
+  DB.set('debts', (DB.get('debts') || []).filter(d => d.id !== id));
+  renderDebts(); renderHomeDebts();
+}
+
+function debtTotals() {
+  const debts = DB.get('debts') || [];
+  let remainingValue = 0, remainingInstallments = 0;
+  debts.forEach(d => {
+    const rest = Math.max(0, (d.totalInstallments || 0) - (d.paidInstallments || 0));
+    remainingInstallments += rest;
+    remainingValue += rest * (d.installment || 0);
+  });
+  return { debts, remainingValue, remainingInstallments };
+}
+
+function renderDebts() {
+  const { debts, remainingValue, remainingInstallments } = debtTotals();
+  const totalEl = document.getElementById('debt-summary-total');
+  const metaEl = document.getElementById('debt-summary-meta');
+  if (totalEl) totalEl.textContent = money(remainingValue);
+  if (metaEl) metaEl.textContent = debts.length ? `${remainingInstallments} parcelas restantes no total` : 'Nenhuma divida cadastrada.';
+  const list = document.getElementById('debt-list');
+  if (!list) return;
+  if (!debts.length) {
+    list.innerHTML = '<div class="empty-state"><span class="big">R$</span><p>Nenhuma divida cadastrada</p></div>';
+    return;
+  }
+  list.innerHTML = debts.map(d => {
+    const rest = Math.max(0, d.totalInstallments - d.paidInstallments);
+    const left = rest * d.installment;
+    return `<div class="debt-item">
+      <div class="debt-main">
+        <div class="debt-title">${d.name}</div>
+        <div class="debt-meta">${d.paidInstallments}/${d.totalInstallments} pagas · ${rest} faltam · parcela ${money(d.installment)}</div>
+        <div class="mini-actions">
+          <button class="btn btn-green btn-sm" onclick="payDebt(${d.id})" ${rest <= 0 ? 'disabled' : ''}>PAGUEI 1</button>
+          <button class="btn btn-outline btn-sm" onclick="removeDebt(${d.id})">REMOVER</button>
+        </div>
+      </div>
+      <div class="debt-pill">${money(left)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderHomeDebts() {
+  const { debts, remainingValue, remainingInstallments } = debtTotals();
+  const totalEl = document.getElementById('home-debt-total');
+  const textEl = document.getElementById('home-debt-text');
+  if (totalEl) totalEl.textContent = money(remainingValue);
+  if (textEl) textEl.textContent = debts.length ? `${remainingInstallments} parcelas faltando em ${debts.length} dividas.` : 'Nenhuma divida cadastrada.';
+}
+
+// ======================================================================
 //  CONFIG
 // ======================================================================
 function loadCfg() {
@@ -1873,6 +2253,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDay(DB.get('active_day') ?? 0);
   loadCfg();
   renderMeals();
+  renderTasks();
+  renderDebts();
   if (getSyncKey()) pullCloud(false);
 
   // Close modal on overlay click
