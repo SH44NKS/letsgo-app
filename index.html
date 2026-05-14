@@ -642,8 +642,9 @@ body::before {
       </div>
       <div class="prog-bar"><div class="prog-fill green" id="today-prog-fill" style="width:0%"></div></div>
     </div>
-    <div style="margin-top:12px; display:flex; gap:8px;">
+    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
       <button class="btn btn-red btn-sm" onclick="goToTreino()">▶ INICIAR</button>
+      <button class="btn btn-blue btn-sm" onclick="nextWorkout()">TROCAR</button>
       <button class="btn btn-outline btn-sm" onclick="showPage('page-treino')">VER PLANO</button>
     </div>
   </div>
@@ -1236,6 +1237,31 @@ function goToTreino() {
   loadDay(saved);
 }
 
+function setWorkoutDay(idx) {
+  DB.set('active_day', idx);
+  currentDay = idx;
+  const chips = document.querySelectorAll('.chip-tabs .chip');
+  chips.forEach((c, i) => c.classList.toggle('active', i === idx));
+  loadDay(idx);
+
+  const plan = PLANS[idx];
+  const tl = document.getElementById('today-label');
+  if (tl) tl.textContent = plan.name;
+  const ts = document.getElementById('today-sub');
+  if (ts) ts.textContent = plan.subtitle;
+  const tp = document.getElementById('today-poster');
+  if (tp) tp.src = plan.image;
+  const badge = document.getElementById('today-badge');
+  if (badge) badge.textContent = plan.badge;
+  updateTodayProgress();
+}
+
+function nextWorkout() {
+  const next = ((DB.get('active_day') ?? currentDay) + 1) % PLANS.length;
+  setWorkoutDay(next);
+  showToast('TREINO TROCADO!');
+}
+
 // ======================================================================
 //  HOME
 // ======================================================================
@@ -1457,22 +1483,7 @@ function saveSleep() {
 //  TREINO
 // ======================================================================
 function selectDay(idx, el) {
-  document.querySelectorAll('.chip-tabs .chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  DB.set('active_day', idx);
-  currentDay = idx;
-  loadDay(idx);
-  // update home
-  const plan = PLANS[idx];
-  const tl = document.getElementById('today-label');
-  if (tl) { tl.textContent = plan.name; }
-  const ts = document.getElementById('today-sub');
-  if (ts) { ts.textContent = plan.subtitle; }
-  const tp = document.getElementById('today-poster');
-  if (tp) { tp.src = plan.image; }
-  const badge = document.getElementById('today-badge');
-  if (badge) { badge.textContent = plan.badge; }
-  updateTodayProgress();
+  setWorkoutDay(idx);
 }
 
 function loadDay(idx) {
