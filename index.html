@@ -334,6 +334,25 @@ body::before {
   width: 72px; height: 52px; border-radius: 8px;
   object-fit: cover; border: 1px solid rgba(255,255,255,0.1);
   flex-shrink: 0;
+  cursor: zoom-in;
+}
+.modal-img {
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #050507;
+  margin-bottom: 14px;
+  cursor: zoom-in;
+}
+.image-viewer .modal { max-width: 980px; border-radius: 20px 20px 0 0; }
+.viewer-img {
+  width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #050507;
 }
 .sync-status {
   display:inline-flex; align-items:center; gap:6px;
@@ -458,6 +477,19 @@ body::before {
 }
 .water-cup.filled { background: rgba(26,107,255,0.4); border-color: var(--blue2); }
 .water-cup:active { transform: scale(0.9); }
+.water-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.water-btn {
+  background: rgba(26,107,255,0.12);
+  border: 1px solid rgba(77,143,255,0.35);
+  border-radius: 10px;
+  color: var(--white);
+  padding: 12px 10px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  text-align: left;
+}
+.water-btn strong { display:block; font-family:var(--font-display); font-size:22px; color:var(--blue2); letter-spacing:1px; }
+.water-btn span { font-family:var(--font-mono); font-size:11px; color:var(--grey); }
 
 /* ===================== WEB ANIMATION ===================== */
 @keyframes webPulse {
@@ -722,9 +754,13 @@ body::before {
         <div class="card-title" style="color:var(--blue2);">💧 ÁGUA</div>
         <div id="agua-texto" style="font-family:var(--font-mono); font-size:13px; color:var(--grey);">0 de 8 copos (2L meta)</div>
       </div>
-      <div style="font-family:var(--font-display); font-size:36px; color:var(--blue2);" id="agua-count">0</div>
+      <div style="font-family:var(--font-display); font-size:36px; color:var(--blue2);" id="agua-count">0L</div>
     </div>
     <div class="prog-bar mt8"><div class="prog-fill blue" id="agua-bar" style="width:0%"></div></div>
+    <div class="water-actions">
+      <button class="water-btn" onclick="addWater('cup')"><strong>+ COPO</strong><span>200ml padrao</span></button>
+      <button class="water-btn" onclick="addWater('bottle')"><strong>+ GARRAFA</strong><span>650ml sua garrafa</span></button>
+    </div>
     <div class="water-cups mt8" id="water-cups"></div>
   </div>
 
@@ -1097,8 +1133,8 @@ body::before {
         <input type="number" id="cfg-kcal" placeholder="2800" inputmode="numeric" />
       </div>
       <div class="input-group">
-        <label>Meta Água (copos)</label>
-        <input type="number" id="cfg-agua" placeholder="8" inputmode="numeric" />
+        <label>Meta Agua (litros)</label>
+        <input type="number" id="cfg-agua" placeholder="3" inputmode="decimal" step="0.1" />
       </div>
     </div>
     <div class="input-group">
@@ -1153,6 +1189,7 @@ body::before {
     <div id="modal-ex-detail" style="font-family:var(--font-mono); font-size:12px; color:var(--grey); margin-bottom:12px;"></div>
 
     <div class="card-title" style="font-size:14px; margin-bottom:8px;">ÚLTIMA SESSÃO</div>
+    <img id="modal-ex-img" class="modal-img" src="" alt="Imagem do exercicio" onclick="openImage(this.src, document.getElementById('modal-ex-name').textContent)" />
     <div id="modal-last-session" style="font-family:var(--font-mono); font-size:12px; color:var(--grey); background:var(--panel2); padding:10px; border-radius:8px; min-height:36px; margin-bottom:16px;"></div>
 
     <div class="card-title" style="font-size:14px; margin-bottom:4px;">SÉRIES DE HOJE</div>
@@ -1162,6 +1199,16 @@ body::before {
       <button class="btn btn-outline btn-sm" onclick="addSetRow()">+ SÉRIE</button>
       <button class="btn btn-green btn-sm" style="flex:1; justify-content:center;" onclick="saveExercise()">✓ SALVAR</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay image-viewer" id="image-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="image-modal-title">IMAGEM</div>
+      <button class="modal-close" onclick="closeImage()">âœ•</button>
+    </div>
+    <img id="image-modal-img" class="viewer-img" src="" alt="Imagem ampliada" />
   </div>
 </div>
 
@@ -1402,6 +1449,42 @@ const MEAL_TEMPLATES = {
   livre_grande: { desc: 'Refeicao livre grande', prot: 35, carb: 95, fat: 35, kcal: 835 },
 };
 
+const EXERCISE_IMAGES = [
+  [
+    'assets/exercises/perna-agachamento-livre.png',
+    'assets/exercises/perna-levantamento-terra.png',
+    'assets/exercises/perna-passada-halteres.png',
+    'assets/exercises/perna-leg-press.png',
+    'assets/exercises/perna-cadeira-extensora.png',
+    'assets/exercises/perna-mesa-flexora.png',
+    'assets/exercises/perna-panturrilha-sentado.png',
+  ],
+  [
+    'assets/exercises/peito-supino-reto.png',
+    'assets/exercises/peito-supino-inclinado-halter.png',
+    'assets/exercises/peito-crucifixo-maquina-cabo.png',
+    'assets/exercises/ombro-desenvolvimento-halter.png',
+    'assets/exercises/ombro-elevacao-lateral.png',
+    'assets/exercises/triceps-corda.png',
+    'assets/exercises/triceps-testa.png',
+    'assets/exercises/extra-abdomen.png',
+  ],
+  [
+    'assets/exercises/costas-puxada-frontal.png',
+    'assets/exercises/costas-remada-curvada.png',
+    'assets/exercises/costas-remada-baixa.png',
+    'assets/exercises/costas-pulldown.png',
+    'assets/exercises/biceps-rosca-direta.png',
+    'assets/exercises/biceps-rosca-alternada.png',
+    'assets/exercises/biceps-rosca-martelo.png',
+    'assets/exercises/extra-prancha-abdominal.png',
+  ],
+];
+
+function getExerciseImage(dayIdx, exIdx) {
+  return EXERCISE_IMAGES[dayIdx]?.[exIdx] || PLANS[dayIdx]?.image || '';
+}
+
 // ======================================================================
 //  NAVIGATION
 // ======================================================================
@@ -1458,6 +1541,24 @@ function nextWorkout() {
 let currentDay = 0;
 let currentExIdx = 0;
 
+function normalizeWaterEntry(entry) {
+  if (typeof entry === 'number') return { cup: entry, bottle: 0 };
+  if (!entry || typeof entry !== 'object') return { cup: 0, bottle: 0 };
+  return { cup: Number(entry.cup || 0), bottle: Number(entry.bottle || 0) };
+}
+
+function waterMl(entry) {
+  const w = normalizeWaterEntry(entry);
+  return (w.cup * 200) + (w.bottle * 650);
+}
+
+function waterGoalMl() {
+  const metas = DB.get('metas') || {};
+  const raw = Number(metas.agua);
+  if (!raw) return 3000;
+  return Math.round(raw > 5 ? raw * 200 : raw * 1000);
+}
+
 function calcXP() {
   const logs = DB.get('treino_logs') || [];
   const meals = DB.get('meals') || {};
@@ -1466,7 +1567,7 @@ function calcXP() {
   const weights = DB.get('weights') || [];
   const tasks = DB.get('tasks') || [];
   const mealCount = Object.values(meals).reduce((sum, day) => sum + (Array.isArray(day) ? day.length : 0), 0);
-  const waterCount = Object.values(water).reduce((sum, cups) => sum + (Number(cups) || 0), 0);
+  const waterCount = Object.values(water).reduce((sum, entry) => sum + Math.floor(waterMl(entry) / 200), 0);
   const sleepCount = Object.values(sleep).filter(v => Number(v) >= 6).length;
   const taskCount = tasks.filter(t => t.done).length;
   return logs.length * 25 + mealCount * 10 + waterCount * 5 + sleepCount * 15 + weights.length * 20 + taskCount * 10;
@@ -1488,10 +1589,10 @@ function renderGame() {
   const water = DB.get('water') || {};
   const sleep = DB.get('sleep') || {};
   const todayMeals = meals[today()] || [];
-  const todayWater = Number(water[today()] || 0);
+  const todayWater = waterMl(water[today()]);
   const doneWorkout = logs.some(l => l.date === today());
   const doneFood = todayMeals.length >= 3;
-  const doneWater = todayWater >= ((DB.get('metas') || {}).agua || 8);
+  const doneWater = todayWater >= waterGoalMl();
   const doneSleep = Number(sleep[today()] || 0) >= ((DB.get('metas') || {}).sono || 7);
   const quests = [
     ['Treino do dia', '+25 XP', doneWorkout],
@@ -1600,34 +1701,56 @@ function updateTodayProgress() {
 // ======================================================================
 function renderWaterCups() {
   const waterData = DB.get('water') || {};
-  const count = waterData[today()] || 0;
-  const metas = DB.get('metas') || {};
-  const meta = metas.agua || 8;
-  const pct = Math.min(100, Math.round(count/meta*100));
+  const entry = normalizeWaterEntry(waterData[today()]);
+  const ml = waterMl(entry);
+  const goal = waterGoalMl();
+  const pct = Math.min(100, Math.round(ml/goal*100));
+  const liters = (ml / 1000).toFixed(2).replace('.', ',');
+  const goalLiters = (goal / 1000).toFixed(1).replace('.', ',');
 
-  document.getElementById('agua-count').textContent = count;
-  document.getElementById('agua-texto').textContent = `${count} de ${meta} copos (${(count*250/1000).toFixed(1)}L / ${(meta*250/1000).toFixed(1)}L meta)`;
-  document.getElementById('stat-agua').textContent = `${count}/${meta}`;
+  document.getElementById('agua-count').textContent = `${liters}L`;
+  document.getElementById('agua-texto').textContent = `${entry.cup} copos de 200ml + ${entry.bottle} garrafas de 650ml (${liters}L / ${goalLiters}L meta)`;
+  document.getElementById('stat-agua').textContent = `${liters}/${goalLiters}L`;
   const bar = document.getElementById('agua-bar');
   if (bar) bar.style.width = pct + '%';
 
   const cont = document.getElementById('water-cups');
   if (!cont) return;
   cont.innerHTML = '';
-  for (let i = 0; i < meta; i++) {
+  for (let i = 0; i < entry.cup; i++) {
     const cup = document.createElement('div');
-    cup.className = 'water-cup' + (i < count ? ' filled' : '');
-    cup.textContent = '💧';
-    cup.onclick = () => toggleWater(i);
+    cup.className = 'water-cup filled';
+    cup.textContent = '200';
+    cup.title = 'Copo 200ml - toque para remover';
+    cup.onclick = () => removeWater('cup');
     cont.appendChild(cup);
+  }
+  for (let i = 0; i < entry.bottle; i++) {
+    const bottle = document.createElement('div');
+    bottle.className = 'water-cup filled';
+    bottle.textContent = '650';
+    bottle.title = 'Garrafa 650ml - toque para remover';
+    bottle.onclick = () => removeWater('bottle');
+    cont.appendChild(bottle);
   }
 }
 
-function toggleWater(idx) {
+function addWater(type) {
   const waterData = DB.get('water') || {};
-  const cur = waterData[today()] || 0;
-  const newVal = idx < cur ? idx : idx + 1;
-  waterData[today()] = newVal;
+  const entry = normalizeWaterEntry(waterData[today()]);
+  entry[type] = (entry[type] || 0) + 1;
+  waterData[today()] = entry;
+  DB.set('water', waterData);
+  renderWaterCups();
+  updateWaterDisplay();
+  renderGame();
+}
+
+function removeWater(type) {
+  const waterData = DB.get('water') || {};
+  const entry = normalizeWaterEntry(waterData[today()]);
+  entry[type] = Math.max(0, (entry[type] || 0) - 1);
+  waterData[today()] = entry;
   DB.set('water', waterData);
   renderWaterCups();
   updateWaterDisplay();
@@ -1636,15 +1759,13 @@ function toggleWater(idx) {
 
 function updateWaterDisplay() {
   const waterData = DB.get('water') || {};
-  const count = waterData[today()] || 0;
-  const metas = DB.get('metas') || {};
-  const meta = metas.agua || 8;
+  const ml = waterMl(waterData[today()]);
+  const goal = waterGoalMl();
+  const liters = (ml / 1000).toFixed(2).replace('.', ',');
+  const goalLiters = (goal / 1000).toFixed(1).replace('.', ',');
   const el = document.getElementById('stat-agua');
-  if (el) el.textContent = `${count}/${meta}`;
+  if (el) el.textContent = `${liters}/${goalLiters}L`;
 }
-
-// ======================================================================
-//  SLEEP
 // ======================================================================
 function updateSleep(val) {
   document.getElementById('sleep-val').textContent = val + 'h';
@@ -1704,7 +1825,7 @@ function loadDay(idx) {
       const lastWeight = exLogs.length ? exLogs[exLogs.length-1].sets?.map(s=>s.w+'kg').join(' / ') || '' : '';
       html += `<div class="ex-item ${done?'done':''}" onclick="openExModal(${idx}, ${globalIdx})">
         <div class="ex-num">${done ? '✓' : globalIdx+1}</div>
-        <img class="ex-thumb" src="${plan.image}" alt="${ex.name}">
+        <img class="ex-thumb" src="${getExerciseImage(idx, globalIdx)}" alt="${ex.name}" onclick="event.stopPropagation(); openImage('${getExerciseImage(idx, globalIdx)}', '${ex.name.replace(/'/g, '')}')">
         <div class="ex-info">
           <div class="ex-name">${ex.name}</div>
           <div class="ex-detail">${ex.series} séries • ${ex.reps} reps</div>
@@ -1733,6 +1854,8 @@ function openExModal(dayIdx, exGlobalIdx) {
 
   document.getElementById('modal-ex-name').textContent = ex.name;
   document.getElementById('modal-ex-detail').textContent = `${ex.series} séries • ${ex.reps} repetições`;
+
+  document.getElementById('modal-ex-img').src = getExerciseImage(dayIdx, exGlobalIdx);
 
   // Last session
   const key = `${dayIdx}_${ex.name}`;
@@ -1814,6 +1937,16 @@ function saveExercise() {
 
 function closeModal() {
   document.getElementById('ex-modal').classList.remove('open');
+}
+
+function openImage(src, title='IMAGEM') {
+  document.getElementById('image-modal-title').textContent = title;
+  document.getElementById('image-modal-img').src = src;
+  document.getElementById('image-modal').classList.add('open');
+}
+
+function closeImage() {
+  document.getElementById('image-modal').classList.remove('open');
 }
 
 function saveTreino() {
@@ -2201,7 +2334,7 @@ function loadCfg() {
   const metas = DB.get('metas') || {};
   ['kcal','agua','sono'].forEach(k => {
     const el = document.getElementById('cfg-'+k);
-    if (el && metas[k]) el.value = metas[k];
+    if (el && metas[k]) el.value = k === 'agua' && Number(metas[k]) > 5 ? (Number(metas[k]) * 0.2).toFixed(1) : metas[k];
   });
 }
 
@@ -2260,6 +2393,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Close modal on overlay click
   document.getElementById('ex-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
+  });
+  document.getElementById('image-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeImage();
   });
 });
 </script>
