@@ -293,6 +293,53 @@ body::before {
 .today-workout h3 { font-family: var(--font-display); font-size: 20px; letter-spacing: 1px; }
 .today-workout p { color: var(--grey); font-size: 13px; margin: 4px 0 12px; }
 
+.xp-card {
+  margin: 16px 16px 0;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, rgba(227,18,18,0.24), rgba(26,107,255,0.16)),
+    var(--panel);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+}
+.rank-row { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+.rank-name { font-family:var(--font-display); font-size:34px; letter-spacing:2px; line-height:1; }
+.rank-sub { font-family:var(--font-mono); font-size:11px; color:var(--grey); margin-top:4px; }
+.rank-level { font-family:var(--font-display); font-size:44px; color:var(--red2); line-height:1; }
+.quest-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.quest {
+  min-height:74px; padding:10px;
+  border-radius:10px; background:rgba(10,10,15,0.72);
+  border:1px solid rgba(255,255,255,0.08);
+}
+.quest.done { border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.08); }
+.quest-title { font-weight:700; font-size:13px; }
+.quest-xp { font-family:var(--font-mono); color:var(--gold); font-size:11px; margin-top:4px; }
+
+.poster-card {
+  margin: 0 16px 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(227,18,18,0.28);
+  background: var(--panel);
+}
+.poster-card img { width:100%; display:block; aspect-ratio: 16 / 10; object-fit:cover; }
+.poster-card.compact img { aspect-ratio: 16 / 7; }
+.poster-caption { padding:10px 12px; font-size:12px; color:var(--grey); font-family:var(--font-mono); }
+.ex-thumb {
+  width: 72px; height: 52px; border-radius: 8px;
+  object-fit: cover; border: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+.sync-status {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 8px; border-radius:999px;
+  font-family:var(--font-mono); font-size:10px;
+  border:1px solid rgba(255,255,255,0.12); color:var(--grey);
+}
+.sync-status.on { color:var(--green); border-color:rgba(0,255,136,0.4); background:rgba(0,255,136,0.08); }
+.sync-status.warn { color:var(--gold); border-color:rgba(255,215,0,0.4); background:rgba(255,215,0,0.08); }
+
 /* ===================== EXERCISE LIST ===================== */
 .ex-item {
   background: var(--panel2);
@@ -480,6 +527,16 @@ body::before {
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .page.active { animation: fadeIn 0.25s ease; }
+
+@media (min-width: 900px) {
+  body { max-width: 1180px; margin: 0 auto; }
+  #nav { left: 50%; transform: translateX(-50%); max-width: 760px; border: 1px solid rgba(227,18,18,0.25); border-bottom: none; border-radius: 18px 18px 0 0; }
+  .stats-grid, .quest-grid { grid-template-columns: repeat(4, 1fr); }
+  .desktop-grid { display:grid; grid-template-columns: 1.1fr .9fr; gap: 12px; padding: 0 16px; }
+  .desktop-grid > .card, .desktop-grid > .poster-card { margin-left:0; margin-right:0; }
+  .ex-item { min-height: 82px; }
+  .ex-thumb { width: 116px; height: 70px; }
+}
 </style>
 </head>
 <body>
@@ -552,6 +609,21 @@ body::before {
     </div>
   </div>
 
+  <div class="xp-card">
+    <div class="rank-row">
+      <div>
+        <div class="rank-name">LEVEL <span id="rank-name">INICIANTE</span></div>
+        <div class="rank-sub" id="rank-sub">Complete missoes diarias para ganhar XP</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="rank-level" id="rank-level">1</div>
+        <div class="rank-sub" id="rank-xp">0 XP</div>
+      </div>
+    </div>
+    <div class="prog-bar mt8"><div class="prog-fill" id="rank-fill" style="width:0%"></div></div>
+    <div class="quest-grid" id="quest-grid"></div>
+  </div>
+
   <!-- Today's workout -->
   <div class="section-label">TREINO DE HOJE</div>
   <div class="today-workout">
@@ -562,6 +634,7 @@ body::before {
       </div>
       <span id="today-badge" class="badge badge-red" style="display:none;">DIA 1</span>
     </div>
+    <img id="today-poster" src="assets/treino-perna.png" alt="Poster do treino de hoje" style="width:100%; aspect-ratio:16/7; object-fit:cover; border-radius:10px; margin-top:12px; border:1px solid rgba(255,255,255,0.08);" />
     <div id="today-progress" style="margin-top:12px; display:none;">
       <div class="flex-between" style="margin-bottom:4px;">
         <span style="font-size:11px; color:var(--grey); font-family:var(--font-mono);">PROGRESSO</span>
@@ -634,6 +707,11 @@ body::before {
     <div style="color:var(--grey); font-size:12px; font-family:var(--font-mono);" id="day-subtitle">FOCO: FORÇA + MASSA</div>
   </div>
 
+  <div class="poster-card compact">
+    <img id="day-poster" src="assets/treino-perna.png" alt="Poster do treino selecionado" />
+    <div class="poster-caption" id="day-poster-caption">Imagem guia do treino. Toque em cada exercicio para registrar cargas e repeticoes.</div>
+  </div>
+
   <!-- Warmup -->
   <div class="section-label" style="margin-top:12px;">AQUECIMENTO</div>
   <div class="card" style="border-color:rgba(255,215,0,0.2);">
@@ -657,6 +735,11 @@ body::before {
   <div class="page-header">
     <h1>🍗 <span>DIETA</span></h1>
     <p>Alimentação + hidratação + macros</p>
+  </div>
+
+  <div class="poster-card">
+    <img src="assets/base-forte-resultados.png" alt="Base forte, resultados reais" />
+    <div class="poster-caption">Base forte: alimentacao, hidratacao, sono e disciplina sustentam os leveis do treino.</div>
   </div>
 
   <!-- Macros today -->
@@ -855,6 +938,25 @@ body::before {
     <button class="btn btn-outline btn-sm" style="width:100%; justify-content:center; margin-top:4px;" onclick="saveMetas()">SALVAR METAS</button>
   </div>
 
+  <div class="section-label">SINCRONIZACAO</div>
+  <div class="card blue">
+    <div class="flex-between" style="margin-bottom:10px;">
+      <div class="card-title" style="color:var(--blue2); margin-bottom:0;">SYNC ENTRE PC E CELULAR</div>
+      <span class="sync-status" id="sync-status">local</span>
+    </div>
+    <div class="input-group">
+      <label>Chave de sync</label>
+      <input type="text" id="cfg-sync-key" placeholder="ex: shanks-vida-2026" autocomplete="off" />
+    </div>
+    <div style="font-size:12px; color:var(--grey); margin-bottom:12px;">
+      Use a mesma chave no PC e no celular. Para sync automatico no Vercel, conecte um KV/Redis ao projeto.
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      <button class="btn btn-blue btn-sm" style="justify-content:center;" onclick="saveSyncKey()">SALVAR CHAVE</button>
+      <button class="btn btn-outline btn-sm" style="border-color:var(--blue2); color:var(--blue2); justify-content:center;" onclick="pullCloud(true)">PUXAR NUVEM</button>
+    </div>
+  </div>
+
   <div class="section-label">DADOS</div>
   <div class="card">
     <div style="font-size:13px; color:var(--grey); margin-bottom:12px;">
@@ -923,9 +1025,106 @@ body::before {
 // ======================================================================
 const DB = {
   get: k => { try { return JSON.parse(localStorage.getItem('letsgo_' + k)); } catch { return null; } },
-  set: (k, v) => localStorage.setItem('letsgo_' + k, JSON.stringify(v)),
+  set: (k, v) => {
+    localStorage.setItem('letsgo_' + k, JSON.stringify(v));
+    queueCloudPush();
+  },
   del: k => localStorage.removeItem('letsgo_' + k),
 };
+
+let syncTimer;
+let syncingFromCloud = false;
+
+function exportState() {
+  const payload = {};
+  Object.keys(localStorage).forEach(k => {
+    if (!k.startsWith('letsgo_')) return;
+    payload[k.replace('letsgo_', '')] = DB.get(k.replace('letsgo_', ''));
+  });
+  return payload;
+}
+
+function importState(payload) {
+  if (!payload || typeof payload !== 'object') return;
+  syncingFromCloud = true;
+  Object.entries(payload).forEach(([k, v]) => localStorage.setItem('letsgo_' + k, JSON.stringify(v)));
+  syncingFromCloud = false;
+}
+
+function getSyncKey() {
+  return (localStorage.getItem('letsgo_sync_key') || '').trim();
+}
+
+function setSyncStatus(text, mode='') {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'sync-status ' + mode;
+}
+
+function queueCloudPush() {
+  if (syncingFromCloud) return;
+  const key = getSyncKey();
+  if (!key) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => pushCloud(), 900);
+}
+
+async function pushCloud() {
+  const key = getSyncKey();
+  if (!key) return;
+  try {
+    setSyncStatus('enviando', 'warn');
+    const res = await fetch('/api/sync?key=' + encodeURIComponent(key), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload: exportState() }),
+    });
+    if (!res.ok) throw new Error('sync');
+    setSyncStatus('sincronizado', 'on');
+  } catch {
+    setSyncStatus('offline/local', 'warn');
+  }
+}
+
+async function pullCloud(manual=false) {
+  const key = getSyncKey();
+  if (!key) {
+    setSyncStatus('sem chave', 'warn');
+    if (manual) showToast('SALVE UMA CHAVE DE SYNC');
+    return;
+  }
+  try {
+    setSyncStatus('puxando', 'warn');
+    const res = await fetch('/api/sync?key=' + encodeURIComponent(key));
+    if (!res.ok) throw new Error('sync');
+    const json = await res.json();
+    if (json.data?.payload) {
+      importState(json.data.payload);
+      initHome(); loadDay(DB.get('active_day') ?? 0); loadCfg(); renderMeals();
+      setSyncStatus('sincronizado', 'on');
+      if (manual) showToast('DADOS DA NUVEM CARREGADOS');
+    } else {
+      await pushCloud();
+      if (manual) showToast('NUVEM INICIADA');
+    }
+  } catch {
+    setSyncStatus('offline/local', 'warn');
+    if (manual) showToast('SYNC INDISPONIVEL');
+  }
+}
+
+function saveSyncKey() {
+  const el = document.getElementById('cfg-sync-key');
+  const key = (el?.value || '').trim();
+  if (!/^[a-zA-Z0-9_-]{4,48}$/.test(key)) {
+    showToast('CHAVE INVALIDA');
+    setSyncStatus('chave invalida', 'warn');
+    return;
+  }
+  localStorage.setItem('letsgo_sync_key', key);
+  pullCloud(true);
+}
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = d => { const dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); };
@@ -939,6 +1138,7 @@ const PLANS = [
     name: 'TREINO DE PERNA',
     subtitle: 'FOCO: FORÇA + MASSA',
     badge: 'DIA 1',
+    image: 'assets/treino-perna.png',
     warmup: '🏃 Esteira – 15 min em ritmo moderado',
     sections: [
       { name: 'LIVRES', exercises: [
@@ -958,6 +1158,7 @@ const PLANS = [
     name: 'PEITO + OMBRO + TRÍCEPS',
     subtitle: 'FOCO: FORÇA • VOLUME • DEFINIÇÃO',
     badge: 'DIA 2',
+    image: 'assets/treino-peito-ombro-triceps.png',
     warmup: '🚴 5–10 min bike/esteira leve\n🔄 Mobilidade de ombro + ativação com elástico',
     sections: [
       { name: 'PEITO', exercises: [
@@ -982,6 +1183,7 @@ const PLANS = [
     name: 'COSTAS + BÍCEPS',
     subtitle: 'FOCO: LARGURA • ESPESSURA • POSTURA • FORÇA',
     badge: 'DIA 3',
+    image: 'assets/treino-costas-biceps.png',
     warmup: '🚣 5–10 min de remo ou esteira leve\n🔄 Mobilidade escapular\n💪 1–2 séries leves do primeiro exercício',
     sections: [
       { name: 'COSTAS', exercises: [
@@ -1040,6 +1242,53 @@ function goToTreino() {
 let currentDay = 0;
 let currentExIdx = 0;
 
+function calcXP() {
+  const logs = DB.get('treino_logs') || [];
+  const meals = DB.get('meals') || {};
+  const water = DB.get('water') || {};
+  const sleep = DB.get('sleep') || {};
+  const weights = DB.get('weights') || [];
+  const mealCount = Object.values(meals).reduce((sum, day) => sum + (Array.isArray(day) ? day.length : 0), 0);
+  const waterCount = Object.values(water).reduce((sum, cups) => sum + (Number(cups) || 0), 0);
+  const sleepCount = Object.values(sleep).filter(v => Number(v) >= 6).length;
+  return logs.length * 25 + mealCount * 10 + waterCount * 5 + sleepCount * 15 + weights.length * 20;
+}
+
+function renderGame() {
+  const xp = calcXP();
+  const level = Math.max(1, Math.floor(xp / 250) + 1);
+  const inLevel = xp % 250;
+  const ranks = ['INICIANTE', 'FOCADO', 'DISCIPLINADO', 'ARANHA', 'MORALES'];
+  document.getElementById('rank-level').textContent = level;
+  document.getElementById('rank-name').textContent = ranks[Math.min(ranks.length - 1, Math.floor((level - 1) / 3))];
+  document.getElementById('rank-xp').textContent = `${xp} XP`;
+  document.getElementById('rank-fill').style.width = Math.round((inLevel / 250) * 100) + '%';
+  document.getElementById('rank-sub').textContent = `${250 - inLevel} XP para o proximo level`;
+
+  const logs = DB.get('treino_logs') || [];
+  const meals = DB.get('meals') || {};
+  const water = DB.get('water') || {};
+  const sleep = DB.get('sleep') || {};
+  const todayMeals = meals[today()] || [];
+  const todayWater = Number(water[today()] || 0);
+  const doneWorkout = logs.some(l => l.date === today());
+  const doneFood = todayMeals.length >= 3;
+  const doneWater = todayWater >= ((DB.get('metas') || {}).agua || 8);
+  const doneSleep = Number(sleep[today()] || 0) >= ((DB.get('metas') || {}).sono || 7);
+  const quests = [
+    ['Treino do dia', '+25 XP', doneWorkout],
+    ['3 refeicoes', '+30 XP', doneFood],
+    ['Meta de agua', '+40 XP', doneWater],
+    ['Sono salvo', '+15 XP', doneSleep],
+  ];
+  document.getElementById('quest-grid').innerHTML = quests.map(q => `
+    <div class="quest ${q[2] ? 'done' : ''}">
+      <div class="quest-title">${q[2] ? 'OK' : 'MISSÃO'} · ${q[0]}</div>
+      <div class="quest-xp">${q[1]}</div>
+    </div>
+  `).join('');
+}
+
 function initHome() {
   // Date
   document.getElementById('home-date').textContent =
@@ -1063,9 +1312,11 @@ function initHome() {
   const plan = PLANS[saved];
   document.getElementById('today-label').textContent = plan.name;
   document.getElementById('today-sub').textContent = plan.subtitle;
+  document.getElementById('today-poster').src = plan.image;
   const badge = document.getElementById('today-badge');
   badge.textContent = plan.badge; badge.style.display = '';
   updateTodayProgress();
+  renderGame();
 
   // Streak week
   renderStreakWeek();
@@ -1160,6 +1411,7 @@ function toggleWater(idx) {
   DB.set('water', waterData);
   renderWaterCups();
   updateWaterDisplay();
+  renderGame();
 }
 
 function updateWaterDisplay() {
@@ -1197,6 +1449,7 @@ function saveSleep() {
   const sleepData = DB.get('sleep') || {};
   sleepData[today()] = parseFloat(val);
   DB.set('sleep', sleepData);
+  renderGame();
   showToast('SONO SALVO!');
 }
 
@@ -1213,6 +1466,10 @@ function selectDay(idx, el) {
   const plan = PLANS[idx];
   const tl = document.getElementById('today-label');
   if (tl) { tl.textContent = plan.name; }
+  const ts = document.getElementById('today-sub');
+  if (ts) { ts.textContent = plan.subtitle; }
+  const tp = document.getElementById('today-poster');
+  if (tp) { tp.src = plan.image; }
   const badge = document.getElementById('today-badge');
   if (badge) { badge.textContent = plan.badge; }
   updateTodayProgress();
@@ -1222,6 +1479,8 @@ function loadDay(idx) {
   const plan = PLANS[idx];
   document.getElementById('day-title').textContent = plan.name;
   document.getElementById('day-subtitle').textContent = plan.subtitle;
+  document.getElementById('day-poster').src = plan.image;
+  document.getElementById('day-poster-caption').textContent = `${plan.badge} · ${plan.name}. Use a imagem como referencia visual e registre carga, repeticoes e progresso.`;
   document.getElementById('warmup-content').innerHTML = plan.warmup.replace(/\n/g,'<br>');
 
   const logs = DB.get('treino_logs') || [];
@@ -1240,6 +1499,7 @@ function loadDay(idx) {
       const lastWeight = exLogs.length ? exLogs[exLogs.length-1].sets?.map(s=>s.w+'kg').join(' / ') || '' : '';
       html += `<div class="ex-item ${done?'done':''}" onclick="openExModal(${idx}, ${globalIdx})">
         <div class="ex-num">${done ? '✓' : globalIdx+1}</div>
+        <img class="ex-thumb" src="${plan.image}" alt="${ex.name}">
         <div class="ex-info">
           <div class="ex-name">${ex.name}</div>
           <div class="ex-detail">${ex.series} séries • ${ex.reps} reps</div>
@@ -1340,6 +1600,7 @@ function saveExercise() {
   loadDay(modalDay);
   updateTodayProgress();
   renderStreakWeek();
+  renderGame();
   const streak = calcStreak();
   const el = document.getElementById('stat-streak');
   if (el) el.textContent = streak;
@@ -1360,6 +1621,7 @@ function saveTreino() {
   }
   showToast('TREINO SALVO! 🔥');
   renderStreakWeek();
+  renderGame();
 }
 
 // ======================================================================
@@ -1384,6 +1646,7 @@ function logMeal() {
   ['meal-desc','m-prot','m-carb','m-fat','m-kcal'].forEach(id => document.getElementById(id).value = '');
 
   renderMeals();
+  renderGame();
   showToast('REFEIÇÃO REGISTRADA! 🍗');
 }
 
@@ -1428,6 +1691,7 @@ function deleteMeal(idx) {
     meals[today()].splice(idx, 1);
     DB.set('meals', meals);
     renderMeals();
+    renderGame();
   }
 }
 
@@ -1445,6 +1709,7 @@ function logWeight() {
   document.getElementById('new-weight').value = '';
   document.getElementById('stat-peso').textContent = w+'';
   renderProgress();
+  renderGame();
   showToast('PESO SALVO!');
 }
 
@@ -1535,6 +1800,9 @@ function renderProgress() {
 // ======================================================================
 function loadCfg() {
   const cfg = DB.get('profile') || {};
+  const syncInput = document.getElementById('cfg-sync-key');
+  if (syncInput) syncInput.value = getSyncKey();
+  setSyncStatus(getSyncKey() ? 'sync pronto' : 'local', getSyncKey() ? 'on' : '');
   ['nome','peso','altura','objetivo'].forEach(k => {
     const el = document.getElementById('cfg-'+k);
     if (el && cfg[k]) el.value = cfg[k];
@@ -1594,6 +1862,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDay(DB.get('active_day') ?? 0);
   loadCfg();
   renderMeals();
+  if (getSyncKey()) pullCloud(false);
 
   // Close modal on overlay click
   document.getElementById('ex-modal').addEventListener('click', function(e) {

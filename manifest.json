@@ -1,7 +1,7 @@
 {
-  "name": "LETS GO! — Miles Fitness",
+  "name": "LETS GO! - Miles Fitness",
   "short_name": "LETS GO!",
-  "description": "Seu assistente de treino com a vibe do Miles Morales",
+  "description": "Rotina, treino, dieta e progresso em modo jogo.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A0A0F",
